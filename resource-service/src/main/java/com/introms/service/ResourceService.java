@@ -19,6 +19,7 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -40,27 +41,28 @@ public class ResourceService {
 
     @Transactional
     public ResourceCreateResponse saveResource(ResourceCreateRequest request) {
-            if (request.data() == null || request.data().length == 0) {
-                throw new InvalidMp3Exception("The request body is invalid MP3");
-            }
+        if (!request.contentType().equalsIgnoreCase(CONTENT_TYPE)) {
+            throw new InvalidMp3Exception("Invalid file format: application/json. Only MP3 files are allowed");
+        }
 
-            String detected = tika.detect(request.data());
-            log.info("Tika detection: {}", detected);
+        if (request.data() == null || request.data().length == 0) {
+            throw new InvalidMp3Exception("The request body is invalid MP3");
+        }
 
-            if (!detected.equalsIgnoreCase(CONTENT_TYPE)) {
-                throw new InvalidMp3Exception("Invalid file format: application/json. Only MP3 files are allowed");
-            }
+        Resource resource = resourceCreateRequesttoResource(request);
+        Resource savedResource = resourceRepository.saveAndFlush(resource);
 
-            Resource resource = resourceCreateRequesttoResource(request);
-            Resource savedResource = resourceRepository.saveAndFlush(resource);
+        log.info("Resource save with ID:{}", savedResource.getId());
 
-            Metadata metadata = extractMetadata(savedResource);
+        Metadata metadata = extractMetadata(savedResource);
 
-            SongMetadataCreateRequest songMetadataCreateRequest = buildSongCreateRequest(savedResource.getId(), metadata);
+        SongMetadataCreateRequest songMetadataCreateRequest = buildSongCreateRequest(savedResource.getId(), metadata);
+        log.info("SongMetadataCreateRequest has been build: {}",songMetadataCreateRequest);
 
-           songMetadataWebClient.createSongMetadata(songMetadataCreateRequest);
+        songMetadataWebClient.createSongMetadata(songMetadataCreateRequest);
 
-            return resourceToResourceResponse(savedResource);
+        log.info("SongMetadata has been created on song-service");
+        return resourceToResourceResponse(savedResource);
     }
 
     public ResourceResponse getResource(String sid) {
@@ -75,24 +77,29 @@ public class ResourceService {
         return new ResourceResponse(resource.getContent(), tika.detect(resource.getContent()));
     }
 
+    @Transactional
     public List<Integer> deleteByIds(String ids) {
         List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
         List<Integer> existingIds = resourceRepository.findExistingIds(idList);
 
         if (!existingIds.isEmpty()) {
             resourceRepository.deleteAllByIdInBatch(existingIds);
-            songMetadataWebClient.deleteSongMetadata(existingIds);
+            try {
+                songMetadataWebClient.deleteSongMetadata(existingIds);
+            } catch (WebClientResponseException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         return existingIds;
     }
 
-    private Metadata extractMetadata(Resource resource)  {
+    private Metadata extractMetadata(Resource resource) {
         try {
             Metadata metadata = new Metadata();
             autoDetectParser.parse(new ByteArrayInputStream(resource.getContent()), new DefaultHandler(), metadata, new ParseContext());
             return metadata;
-        } catch (IOException  | SAXException | TikaException e) {
+        } catch (IOException | SAXException | TikaException e) {
             throw new RuntimeException("Metadata extraction failed");
         }
     }

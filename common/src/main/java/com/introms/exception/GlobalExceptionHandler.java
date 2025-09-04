@@ -2,6 +2,10 @@ package com.introms.exception;
 
 import com.introms.exception.response.SimpleErrorResponse;
 import com.introms.exception.response.ValidationErrorResponse;
+import org.apache.coyote.BadRequestException;
+import org.apache.juli.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -14,6 +18,7 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(ResourceNotFoundException.class) // Custom exception
     public ResponseEntity<SimpleErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
@@ -21,6 +26,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 String.valueOf(HttpStatus.NOT_FOUND.value())
         );
+        LOGGER.error("Resource not found:{}",ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
@@ -30,6 +36,19 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
+
+        LOGGER.error("InvalidMp3 data:{}",ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(BadRequestException.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleValidation(BadRequestException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
+        );
+
+        LOGGER.error("Resource validation exception:{}",ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -39,6 +58,8 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
+
+        LOGGER.error("InvalidIdCsv data:{}",ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -48,6 +69,8 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 String.valueOf(HttpStatus.CONFLICT.value())
         );
+
+        LOGGER.error("SongMetadata already exists:{}",ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
@@ -58,8 +81,10 @@ public class GlobalExceptionHandler {
                 ex.getDetails(),
                 String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
+        LOGGER.error("Validation error:{}",ex.getDetails());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
+
 
     /**
      * Handle validation exceptions for @Valid.
@@ -76,6 +101,7 @@ public class GlobalExceptionHandler {
                 details,
                 String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
+        LOGGER.error("Validation error:{}",details);
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -88,6 +114,7 @@ public class GlobalExceptionHandler {
                 "An error occurred on the server: ",
                 String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
         );
+        LOGGER.error("Unknown error",ex);
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

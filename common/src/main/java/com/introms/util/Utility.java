@@ -24,7 +24,6 @@ public class Utility {
         }
     }
 
-
     public static boolean isIdValid(String id){
         if(id==null){
             return false;
@@ -83,7 +82,7 @@ public class Utility {
                 }
                 idList.add(pp);
             } catch (NumberFormatException e) {
-                throw new InvalidIdCsvException(String.format("Invalid ID %s at position %d; too large for 32 bit integer integer",p,i));
+                throw new InvalidIdCsvException(String.format("Invalid ID %s at position %d; too large for 32 bit integer",p,i));
             }
         }
         return idList.stream().distinct().collect(Collectors.toList());

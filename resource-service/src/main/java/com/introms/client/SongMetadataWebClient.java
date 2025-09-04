@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -46,6 +47,7 @@ public class SongMetadataWebClient {
                                 .queryParam("id", csv)
                                 .build())
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, ClientResponse::createException)
                 .bodyToMono(new ParameterizedTypeReference<Map<String, List<Integer>>>() {
                 })
                 .block();
