@@ -79,9 +79,9 @@ public class ResourceService {
 
         if (!existingIds.isEmpty()) {
             resourceRepository.deleteAllByIdInBatch(existingIds);
+            songRestClient.deleteSongMetadata(existingIds);
         }
 
-        songRestClient.deleteSongMetadata(existingIds);
         return existingIds;
     }
 
