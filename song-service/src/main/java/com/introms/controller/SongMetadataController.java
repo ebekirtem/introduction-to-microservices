@@ -31,8 +31,8 @@ public class SongMetadataController {
     }
 
     @DeleteMapping
-    public ResponseEntity<Map<String, List<Integer>>> deleteSongMetadata(@RequestParam("id") String ids) {
-        List<Integer> integers = songMetadataService.deleteByIds(ids);
+    public ResponseEntity<Map<String, List<Integer>>> deleteSongMetadata(@RequestParam("id") String csvIds) {
+        List<Integer> integers = songMetadataService.deleteByIds(csvIds);
         return ResponseEntity.ok(Map.of("ids",integers));
     }
 }

@@ -24,14 +24,6 @@ public class Utility {
         }
     }
 
-    public static String parseYear(String rawYear){
-        if(rawYear==null || rawYear.isBlank()){
-            return null;
-        }
-
-        String trimmed=rawYear.trim();
-        return trimmed.substring(0,4);
-    }
 
     public static boolean isIdValid(String id){
         if(id==null){
@@ -61,8 +53,8 @@ public class Utility {
         if(csv==null || csv.isBlank()){
             throw new InvalidIdCsvException("CSV string format is invalid or missing");
         }
-        if(csv.length()>=maxLength){
-            throw new InvalidIdCsvException(String.format("CSV string length: %d exceeds the %d character limit",csv.length(),maxLength));
+        if(csv.length()>maxLength){
+            throw new InvalidIdCsvException(String.format("CSV string is too long: received %d characters, maximum allowed is %d",csv.length(),maxLength));
         }
 
         if(!csv.matches("^[0-9]+(?:,[0-9]+)*+")){
@@ -87,7 +79,7 @@ public class Utility {
             try {
                 int pp = Integer.parseInt(p);
                 if(pp<=0){
-                    throw new InvalidIdCsvException(String.format("Invalid ID %s at position %d; must be positive integer",p,i));
+                    throw new InvalidIdCsvException(String.format("Invalid ID format: '%s'. Only positive integers are allowed",p));
                 }
                 idList.add(pp);
             } catch (NumberFormatException e) {

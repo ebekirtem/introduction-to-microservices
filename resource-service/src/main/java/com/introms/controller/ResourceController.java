@@ -19,7 +19,7 @@ public class ResourceController {
 
  private final ResourceService resourceService;
     @PostMapping
-    public ResponseEntity<ResourceCreateResponse> uploadResource(@RequestBody byte[] mp3Data, @RequestHeader(value = "Content-Type") String contentType) {
+    public ResponseEntity<ResourceCreateResponse> uploadResource(@RequestBody(required = false) byte[] mp3Data , @RequestHeader(value = "Content-Type") String contentType) {
         ResourceCreateRequest resourceCreateRequest =new ResourceCreateRequest(mp3Data,contentType);
         return ResponseEntity.ok(resourceService.saveResource(resourceCreateRequest));
     }

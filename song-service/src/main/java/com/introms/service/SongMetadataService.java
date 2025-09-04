@@ -4,8 +4,9 @@ import com.introms.dto.SongMetadataCreateRequest;
 import com.introms.dto.SongMetadataCreateResponse;
 import com.introms.dto.SongMetadataResponse;
 import com.introms.entity.SongMetadata;
-import com.introms.exception.BadRequestException;
+import com.introms.exception.InvalidMp3Exception;
 import com.introms.exception.ResourceNotFoundException;
+import com.introms.exception.SongMetadataAlreadyExistException;
 import com.introms.exception.ValidationException;
 import com.introms.repository.SongMetadataRepository;
 import com.introms.util.Utility;
@@ -22,13 +23,17 @@ public class SongMetadataService {
     private final SongMetadataRepository songMetadataRepository;
     private final Validator validator;
 
-    private static final Integer MAX_IDS_LENGTH=200;
+    private static final Integer MAX_IDS_LENGTH = 200;
 
     public SongMetadataCreateResponse createSong(final SongMetadataCreateRequest songMetadataCreateRequest) {
         Map<String, String> errors = validate(songMetadataCreateRequest);
 
-        if(!errors.isEmpty()){
-            throw new ValidationException("Validation error",errors);
+        if (!errors.isEmpty()) {
+            throw new ValidationException("Validation error", errors);
+        }
+
+        if(songMetadataRepository.findById(songMetadataCreateRequest.id()).isPresent()){
+            throw new SongMetadataAlreadyExistException(String.format("Metadata for resource ID=%d already exists", songMetadataCreateRequest.id()));
         }
 
         SongMetadata songMetadata = toSongMetadata(songMetadataCreateRequest);
@@ -37,36 +42,36 @@ public class SongMetadataService {
         return toSongMetadataCreateResponse(savedSongMetadata);
     }
 
-    private Map<String,String> validate(SongMetadataCreateRequest songMetadataCreateRequest) {
-        Set<ConstraintViolation<SongMetadataCreateRequest>> violations=validator.validate(songMetadataCreateRequest);
+    private Map<String, String> validate(SongMetadataCreateRequest songMetadataCreateRequest) {
+        Set<ConstraintViolation<SongMetadataCreateRequest>> violations = validator.validate(songMetadataCreateRequest);
 
-        Map<String,String> details=new LinkedHashMap<>();
+        Map<String, String> details = new LinkedHashMap<>();
 
-        for(ConstraintViolation<SongMetadataCreateRequest> v:violations){
+        for (ConstraintViolation<SongMetadataCreateRequest> v : violations) {
             String field = v.getPropertyPath().toString();
-            details.put(field,v.getMessage());
+            details.put(field, v.getMessage());
         }
         return details;
     }
 
     public SongMetadataResponse getSongMetadata(String sid) {
         boolean idValid = Utility.isIdValid(sid);
-        if(!idValid){
-            throw new BadRequestException(String.format("The provided ID: '%s'  is invalid (e.g., contains letters, decimals, is negative, or zero)",sid));
+        if (!idValid) {
+            throw new InvalidMp3Exception(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
         }
 
-        Integer id=Integer.parseInt(sid);
+        Integer id = Integer.parseInt(sid);
         SongMetadata songMetadata = songMetadataRepository.findById(id).orElseThrow(() ->
-                new ResourceNotFoundException(String.format("Song metadata with ID=%d not found",id)));
+                new ResourceNotFoundException(String.format("Song metadata with ID=%d not found", id)));
         return toSongMetadataResponse(songMetadata);
 
     }
 
-    public List<Integer> deleteByIds(String ids){
-        List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
+    public List<Integer> deleteByIds(String csvIds) {
+        List<Integer> idList = Utility.validateAndParse(csvIds, MAX_IDS_LENGTH);
         List<Integer> existingIds = songMetadataRepository.findExistingIds(idList);
 
-        if(!existingIds.isEmpty()){
+        if (!existingIds.isEmpty()) {
             songMetadataRepository.deleteAllByIdInBatch(existingIds);
         }
 

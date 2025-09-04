@@ -19,21 +19,44 @@ public class GlobalExceptionHandler {
     public ResponseEntity<SimpleErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         SimpleErrorResponse errorResponse = new SimpleErrorResponse(
                 ex.getMessage(),
-                "404" // Error code for NOT_FOUND
+                String.valueOf(HttpStatus.NOT_FOUND.value())
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
-    /**
-     * for Manual validation
-     */
+    @ExceptionHandler(InvalidMp3Exception.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleInvalidMp3Request(InvalidMp3Exception ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidIdCsvException.class) // InvalidIdCsvException
+    public ResponseEntity<SimpleErrorResponse> handleIdCsv(InvalidIdCsvException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(SongMetadataAlreadyExistException.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleSongMetadataAlreadyExist(SongMetadataAlreadyExistException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.CONFLICT.value())
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidations(ValidationException ex) {
         ValidationErrorResponse errorResponse = new ValidationErrorResponse(
                 "Validation error",
                 ex.getDetails(),
-                "400" // Error code for BAD_REQUEST
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -51,25 +74,7 @@ public class GlobalExceptionHandler {
         ValidationErrorResponse errorResponse = new ValidationErrorResponse(
                 "Validation error",
                 details,
-                "400" // Error code for BAD_REQUEST
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(BadRequestException.class) // Custom exception
-    public ResponseEntity<SimpleErrorResponse> handleBadRequest(BadRequestException ex) {
-        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
-                ex.getMessage(),
-                "400" // Error code for NOT_FOUND
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(InvalidIdCsvException.class) // InvalidIdCsvException
-    public ResponseEntity<SimpleErrorResponse> handleIdCsv(InvalidIdCsvException ex) {
-        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
-                ex.getMessage(),
-                "400" // Error code for NOT_FOUND
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
@@ -80,8 +85,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<SimpleErrorResponse> handleGeneralException(Exception ex) {
         SimpleErrorResponse errorResponse = new SimpleErrorResponse(
-                "An unexpected error occurred: " + ex.getMessage(),
-                "500" // Error code for INTERNAL_SERVER_ERROR
+                "An error occurred on the server: ",
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }

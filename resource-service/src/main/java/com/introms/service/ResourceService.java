@@ -1,16 +1,16 @@
 package com.introms.service;
 
-import com.introms.dto.SongMetadataCreateResponse;
+import com.introms.exception.InvalidMp3Exception;
 import com.introms.util.Utility;
-import com.introms.client.SongRestClient;
+import com.introms.client.SongMetadataWebClient;
 import com.introms.dto.SongMetadataCreateRequest;
 import com.introms.entity.Resource;
-import com.introms.exception.BadRequestException;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.repository.ResourceRepository;
 import dto.ResourceCreateRequest;
 import dto.ResourceCreateResponse;
 import dto.ResourceResponse;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -33,44 +33,46 @@ public class ResourceService {
     private final Tika tika;
     private final AutoDetectParser autoDetectParser;
     private final ResourceRepository resourceRepository;
-    private final SongRestClient songRestClient;
+    private final SongMetadataWebClient songMetadataWebClient;
 
     private static final String CONTENT_TYPE = "audio/mpeg";
-    private static final Integer MAX_IDS_LENGTH=200;
+    private static final Integer MAX_IDS_LENGTH = 200;
 
+    @Transactional
     public ResourceCreateResponse saveResource(ResourceCreateRequest request) {
-        try {
-            String detect = tika.detect(request.data());
-            log.info("Tika detection: {}", detect);
+            if (request.data() == null || request.data().length == 0) {
+                throw new InvalidMp3Exception("The request body is invalid MP3");
+            }
 
-            if (!detect.equalsIgnoreCase(CONTENT_TYPE)) {
-                throw new BadRequestException("Invalid Mp3");
+            String detected = tika.detect(request.data());
+            log.info("Tika detection: {}", detected);
+
+            if (!detected.equalsIgnoreCase(CONTENT_TYPE)) {
+                throw new InvalidMp3Exception("Invalid file format: application/json. Only MP3 files are allowed");
             }
 
             Resource resource = resourceCreateRequesttoResource(request);
-            Resource savedResource = resourceRepository.save(resource);
-            ResourceCreateResponse resourceCreateResponse = resourceToResourceResponse(savedResource);
+            Resource savedResource = resourceRepository.saveAndFlush(resource);
 
             Metadata metadata = extractMetadata(savedResource);
+
             SongMetadataCreateRequest songMetadataCreateRequest = buildSongCreateRequest(savedResource.getId(), metadata);
-            SongMetadataCreateResponse songMetadataCreateResponse = songRestClient.createSongMetadata(songMetadataCreateRequest);
-            log.info("SongResponse: {}", songMetadataCreateResponse);
-            return resourceCreateResponse;
-        } catch (IOException | SAXException | TikaException e) {
-            throw new RuntimeException(e);
-        }
+
+           songMetadataWebClient.createSongMetadata(songMetadataCreateRequest);
+
+            return resourceToResourceResponse(savedResource);
     }
 
     public ResourceResponse getResource(String sid) {
         boolean idValid = Utility.isIdValid(sid);
         if (!idValid) {
-            throw new BadRequestException(String.format("The provided ID: '%s'  is invalid (e.g., contains letters, decimals, is negative, or zero)",sid));
+            throw new InvalidMp3Exception(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
         }
 
         Integer id = Integer.parseInt(sid);
         Resource resource = resourceRepository.findById(id).orElseThrow(() ->
-                new ResourceNotFoundException(String.format("Resource with ID=%d not found",id)));
-        return new ResourceResponse(resource.getContent(), CONTENT_TYPE);
+                new ResourceNotFoundException(String.format("Resource with ID=%d not found", id)));
+        return new ResourceResponse(resource.getContent(), tika.detect(resource.getContent()));
     }
 
     public List<Integer> deleteByIds(String ids) {
@@ -79,21 +81,23 @@ public class ResourceService {
 
         if (!existingIds.isEmpty()) {
             resourceRepository.deleteAllByIdInBatch(existingIds);
-            songRestClient.deleteSongMetadata(existingIds);
+            songMetadataWebClient.deleteSongMetadata(existingIds);
         }
 
         return existingIds;
     }
 
-    private Metadata extractMetadata(Resource resource) throws IOException, SAXException, TikaException {
-        Metadata metadata = new Metadata();
-        autoDetectParser.parse(new ByteArrayInputStream(resource.getContent()), new DefaultHandler(), metadata, new ParseContext());
-
-        return metadata;
+    private Metadata extractMetadata(Resource resource)  {
+        try {
+            Metadata metadata = new Metadata();
+            autoDetectParser.parse(new ByteArrayInputStream(resource.getContent()), new DefaultHandler(), metadata, new ParseContext());
+            return metadata;
+        } catch (IOException  | SAXException | TikaException e) {
+            throw new RuntimeException("Metadata extraction failed");
+        }
     }
 
     private SongMetadataCreateRequest buildSongCreateRequest(Integer id, Metadata metadata) {
-
         String name = metadata.get("dc:title"); // Title (Name)
         String artist = metadata.get("xmpDM:artist"); // Artist
         String album = metadata.get("xmpDM:album"); // Album
@@ -102,14 +106,10 @@ public class ResourceService {
 
         // Map parsed metadata into a SongCreateRequest DTO
         return new SongMetadataCreateRequest(
-                id, // Resource ID
-                name != null ? name : "Unknown Name", // Default if missing
-                artist != null ? artist : "Unknown Artist", // Default if missing
-                album != null ? album : "Unknown Album", // Default if missing
-                duration, // Default to "00:00"
-                Utility.parseYear(year) // Parsed year
+                id, name, artist, album, duration, year
         );
     }
+
 
     private Resource resourceCreateRequesttoResource(ResourceCreateRequest resourceCreateRequest) {
         Resource resource = new Resource();

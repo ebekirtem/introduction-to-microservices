@@ -24,7 +24,7 @@ public record SongMetadataCreateRequest(
 
         @NotBlank(message = "Year is required")
 
-        @Pattern(regexp = "^(19\\d{2}|20\\d{2})$", message = "year bust be between 1900 and 2099")
+        @Pattern(regexp = "^(19\\d{2}|20\\d{2})$", message = "Year bust be between 1900 and 2099")
         String year
 ) {
 }

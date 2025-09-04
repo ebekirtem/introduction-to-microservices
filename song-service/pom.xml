@@ -10,7 +10,7 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>songMetadata-service</artifactId>
+    <artifactId>song-service</artifactId>
 
     <dependencies>
         <dependency>
