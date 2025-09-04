@@ -1,6 +1,7 @@
 package com.introms.service;
 
 import com.introms.dto.SongMetadataCreateRequest;
+import com.introms.dto.SongMetadataCreateResponse;
 import com.introms.dto.SongMetadataResponse;
 import com.introms.entity.SongMetadata;
 import com.introms.exception.BadRequestException;
@@ -20,7 +21,10 @@ import java.util.*;
 public class SongMetadataService {
     private final SongMetadataRepository songMetadataRepository;
     private final Validator validator;
-    public SongMetadataResponse createSong(final SongMetadataCreateRequest songMetadataCreateRequest) {
+
+    private static final Integer MAX_IDS_LENGTH=200;
+
+    public SongMetadataCreateResponse createSong(final SongMetadataCreateRequest songMetadataCreateRequest) {
         Map<String, String> errors = validate(songMetadataCreateRequest);
 
         if(!errors.isEmpty()){
@@ -30,7 +34,7 @@ public class SongMetadataService {
         SongMetadata songMetadata = toSongMetadata(songMetadataCreateRequest);
 
         SongMetadata savedSongMetadata = songMetadataRepository.save(songMetadata);
-        return toSongMetadataResponse(savedSongMetadata);
+        return toSongMetadataCreateResponse(savedSongMetadata);
     }
 
     private Map<String,String> validate(SongMetadataCreateRequest songMetadataCreateRequest) {
@@ -48,26 +52,19 @@ public class SongMetadataService {
     public SongMetadataResponse getSongMetadata(String sid) {
         boolean idValid = Utility.isIdValid(sid);
         if(!idValid){
-            throw new BadRequestException("The provided ID is invalid (e.g., contains letters, decimals, is negative, or zero)");
+            throw new BadRequestException(String.format("The provided ID: '%s'  is invalid (e.g., contains letters, decimals, is negative, or zero)",sid));
         }
 
         Integer id=Integer.parseInt(sid);
         SongMetadata songMetadata = songMetadataRepository.findById(id).orElseThrow(() ->
-                new ResourceNotFoundException("SongMetadata with the specified ID does not exist"));
+                new ResourceNotFoundException(String.format("Song metadata with ID=%d not found",id)));
         return toSongMetadataResponse(songMetadata);
 
     }
 
     public List<Integer> deleteByIds(String ids){
-        if(!Utility.isValidIds(ids)){
-            throw new BadRequestException(" CSV string format is invalid or exceeds length restrictions");
-        }
-
-        List<Integer> listOfId = Arrays.stream(ids.split(","))
-                .map(Integer::parseInt)
-                .distinct().toList();
-
-        List<Integer> existingIds = songMetadataRepository.findExistingIds(listOfId);
+        List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
+        List<Integer> existingIds = songMetadataRepository.findExistingIds(idList);
 
         if(!existingIds.isEmpty()){
             songMetadataRepository.deleteAllByIdInBatch(existingIds);
@@ -96,5 +93,10 @@ public class SongMetadataService {
                 songMetadata.getAlbum(),
                 songMetadata.getDuration(),
                 songMetadata.getYear());
+    }
+
+    private SongMetadataCreateResponse toSongMetadataCreateResponse(final SongMetadata songMetadata) {
+        return new SongMetadataCreateResponse(
+                songMetadata.getId());
     }
 }

@@ -33,6 +33,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(InvalidIdCsvException.class) // InvalidIdCsvException
+    public ResponseEntity<SimpleErrorResponse> handleIdCsv(InvalidIdCsvException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                "400" // Error code for NOT_FOUND
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Handle validation exceptions for @Valid.
      */

@@ -1,6 +1,7 @@
 package com.introms.controller;
 
 import com.introms.dto.SongMetadataCreateRequest;
+import com.introms.dto.SongMetadataCreateResponse;
 import com.introms.dto.SongMetadataResponse;
 import com.introms.service.SongMetadataService;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,7 @@ public class SongMetadataController {
 
     private final SongMetadataService songMetadataService;
     @PostMapping
-    public ResponseEntity<SongMetadataResponse> createSongMetadata(@RequestBody SongMetadataCreateRequest songMetadataCreateRequest) {
+    public ResponseEntity<SongMetadataCreateResponse> createSongMetadata(@RequestBody SongMetadataCreateRequest songMetadataCreateRequest) {
         log.info("SongCreateRequest: {}", songMetadataCreateRequest);
        return ResponseEntity.ok(songMetadataService.createSong(songMetadataCreateRequest));
     }

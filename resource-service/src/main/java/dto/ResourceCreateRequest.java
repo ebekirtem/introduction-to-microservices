@@ -1,6 +1,6 @@
 package dto;
 
-public record ResourceCreateRequest(byte [] fileData)
+public record ResourceCreateRequest(byte [] data, String contentType)
 {
 
 }

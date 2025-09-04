@@ -32,7 +32,7 @@ public class SongMetadata {
     private String duration;
 
     @Column(nullable = false)
-    private Integer year;
+    private String year;
 
     @Builder.Default
     @Column(nullable = false)

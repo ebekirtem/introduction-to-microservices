@@ -1,15 +1,16 @@
 package com.introms.service;
 
+import com.introms.dto.SongMetadataCreateResponse;
 import com.introms.util.Utility;
 import com.introms.client.SongRestClient;
 import com.introms.dto.SongMetadataCreateRequest;
-import com.introms.dto.SongMetadataResponse;
 import com.introms.entity.Resource;
 import com.introms.exception.BadRequestException;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.repository.ResourceRepository;
 import dto.ResourceCreateRequest;
 import dto.ResourceCreateResponse;
+import dto.ResourceResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
@@ -23,7 +24,6 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 @Slf4j
@@ -35,12 +35,15 @@ public class ResourceService {
     private final ResourceRepository resourceRepository;
     private final SongRestClient songRestClient;
 
+    private static final String CONTENT_TYPE = "audio/mpeg";
+    private static final Integer MAX_IDS_LENGTH=200;
+
     public ResourceCreateResponse saveResource(ResourceCreateRequest request) {
         try {
-            String detect = tika.detect(request.fileData());
+            String detect = tika.detect(request.data());
             log.info("Tika detection: {}", detect);
 
-            if (!detect.equalsIgnoreCase("audio/mpeg")) {
+            if (!detect.equalsIgnoreCase(CONTENT_TYPE)) {
                 throw new BadRequestException("Invalid Mp3");
             }
 
@@ -50,44 +53,36 @@ public class ResourceService {
 
             Metadata metadata = extractMetadata(savedResource);
             SongMetadataCreateRequest songMetadataCreateRequest = buildSongCreateRequest(savedResource.getId(), metadata);
-            SongMetadataResponse songMetadataResponse = songRestClient.createSong(songMetadataCreateRequest);
-            log.info("SongResponse: {}", songMetadataResponse);
+            SongMetadataCreateResponse songMetadataCreateResponse = songRestClient.createSongMetadata(songMetadataCreateRequest);
+            log.info("SongResponse: {}", songMetadataCreateResponse);
             return resourceCreateResponse;
         } catch (IOException | SAXException | TikaException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public byte [] getResource(String sid) {
+    public ResourceResponse getResource(String sid) {
         boolean idValid = Utility.isIdValid(sid);
-        if(!idValid){
-            throw new BadRequestException("The provided ID is invalid (e.g., contains letters, decimals, is negative, or zero)");
+        if (!idValid) {
+            throw new BadRequestException(String.format("The provided ID: '%s'  is invalid (e.g., contains letters, decimals, is negative, or zero)",sid));
         }
 
-        Integer id=Integer.parseInt(sid);
+        Integer id = Integer.parseInt(sid);
         Resource resource = resourceRepository.findById(id).orElseThrow(() ->
-                    new ResourceNotFoundException("Resource with the specified ID does not exist"));
-        return resource.getContent();
-
+                new ResourceNotFoundException(String.format("Resource with ID=%d not found",id)));
+        return new ResourceResponse(resource.getContent(), CONTENT_TYPE);
     }
 
-    public List<Integer> deleteByIds(String ids){
-     if(!Utility.isValidIds(ids)){
-         throw new BadRequestException(" CSV string format is invalid or exceeds length restrictions");
-     }
+    public List<Integer> deleteByIds(String ids) {
+        List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
+        List<Integer> existingIds = resourceRepository.findExistingIds(idList);
 
-        List<Integer> listOfId = Arrays.stream(ids.split(","))
-                .map(Integer::parseInt)
-                .distinct().toList();
-
-        List<Integer> existingIds = resourceRepository.findExistingIds(listOfId);
-
-        if(!existingIds.isEmpty()){
+        if (!existingIds.isEmpty()) {
             resourceRepository.deleteAllByIdInBatch(existingIds);
         }
 
-        //existingIds.forEach(id->);
-       return existingIds;
+        songRestClient.deleteSongMetadata(existingIds);
+        return existingIds;
     }
 
     private Metadata extractMetadata(Resource resource) throws IOException, SAXException, TikaException {
@@ -114,12 +109,11 @@ public class ResourceService {
                 duration, // Default to "00:00"
                 Utility.parseYear(year) // Parsed year
         );
-
     }
 
     private Resource resourceCreateRequesttoResource(ResourceCreateRequest resourceCreateRequest) {
         Resource resource = new Resource();
-        resource.setContent(resourceCreateRequest.fileData());
+        resource.setContent(resourceCreateRequest.data());
         return resource;
     }
 
