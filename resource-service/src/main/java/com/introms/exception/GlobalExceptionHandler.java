@@ -2,7 +2,6 @@ package com.introms.exception;
 
 import com.introms.exception.response.SimpleErrorResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,8 +32,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(BadRequestException.class) // Custom exception
-    public ResponseEntity<SimpleErrorResponse> handleValidation(BadRequestException ex) {
+    @ExceptionHandler(IdValidationException.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleValidation(IdValidationException ex) {
         SimpleErrorResponse errorResponse = new SimpleErrorResponse(
                 ex.getMessage(),
                 String.valueOf(HttpStatus.BAD_REQUEST.value())

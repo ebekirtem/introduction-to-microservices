@@ -4,7 +4,7 @@ import com.introms.dto.SongMetadataCreateRequest;
 import com.introms.dto.SongMetadataCreateResponse;
 import com.introms.dto.SongMetadataResponse;
 import com.introms.entity.SongMetadata;
-import com.introms.exception.InvalidMp3Exception;
+import com.introms.exception.IdValidationException;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.exception.SongMetadataAlreadyExistException;
 import com.introms.exception.MetadataValidationException;
@@ -63,7 +63,7 @@ public class SongMetadataService {
     public SongMetadataResponse getSongMetadata(String sid) {
         boolean idValid = Utility.isIdValid(sid);
         if (!idValid) {
-            throw new InvalidMp3Exception(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
+            throw new IdValidationException(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
         }
 
         Integer id = Integer.parseInt(sid);

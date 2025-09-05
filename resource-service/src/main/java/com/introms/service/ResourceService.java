@@ -1,5 +1,6 @@
 package com.introms.service;
 
+import com.introms.exception.IdValidationException;
 import com.introms.exception.InvalidMp3Exception;
 import com.introms.util.Utility;
 import com.introms.client.SongMetadataWebClient;
@@ -70,7 +71,7 @@ public class ResourceService {
         log.info("Resource requested with ID:{}", sid);
         boolean idValid = Utility.isIdValid(sid);
         if (!idValid) {
-            throw new InvalidMp3Exception(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
+            throw new IdValidationException(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
         }
 
         Integer id = Integer.parseInt(sid);
