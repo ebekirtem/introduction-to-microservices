@@ -2,6 +2,9 @@ server:
   port: 8082
 
 spring:
+  application:
+      name: song-service
+
   datasource:
     url: jdbc:postgresql://localhost:5433/song-db
     username: postgres

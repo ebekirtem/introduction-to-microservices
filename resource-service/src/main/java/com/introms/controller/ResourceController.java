@@ -1,9 +1,9 @@
 package com.introms.controller;
 
 import com.introms.service.ResourceService;
-import dto.ResourceCreateRequest;
-import dto.ResourceCreateResponse;
-import dto.ResourceResponse;
+import com.introms.dto.ResourceCreateRequest;
+import com.introms.dto.ResourceCreateResponse;
+import com.introms.dto.ResourceResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -35,7 +35,6 @@ public class ResourceController {
 
     @DeleteMapping
     public ResponseEntity<Map<String, List<Integer>>> deleteResources(@RequestParam("id") String ids) {
-        List<Integer> integers = resourceService.deleteByIds(ids);
-        return ResponseEntity.ok(Map.of("ids",integers));
+        return ResponseEntity.ok(resourceService.deleteByIds(ids));
     }
 }

@@ -7,16 +7,18 @@ import com.introms.entity.SongMetadata;
 import com.introms.exception.InvalidMp3Exception;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.exception.SongMetadataAlreadyExistException;
-import com.introms.exception.ValidationException;
+import com.introms.exception.MetadataValidationException;
 import com.introms.repository.SongMetadataRepository;
 import com.introms.util.Utility;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SongMetadataService {
@@ -26,10 +28,12 @@ public class SongMetadataService {
     private static final Integer MAX_IDS_LENGTH = 200;
 
     public SongMetadataCreateResponse createSong(final SongMetadataCreateRequest songMetadataCreateRequest) {
+
+        log.info("Song metadata create request : {}",songMetadataCreateRequest);
         Map<String, String> errors = validate(songMetadataCreateRequest);
 
         if (!errors.isEmpty()) {
-            throw new ValidationException("Validation error", errors);
+            throw new MetadataValidationException("Validation error", errors);
         }
 
         if(songMetadataRepository.findById(songMetadataCreateRequest.id()).isPresent()){
@@ -39,6 +43,8 @@ public class SongMetadataService {
         SongMetadata songMetadata = toSongMetadata(songMetadataCreateRequest);
 
         SongMetadata savedSongMetadata = songMetadataRepository.save(songMetadata);
+
+        log.info("Song metadata successfully saved: {}",savedSongMetadata);
         return toSongMetadataCreateResponse(savedSongMetadata);
     }
 
@@ -67,15 +73,16 @@ public class SongMetadataService {
 
     }
 
-    public List<Integer> deleteByIds(String csvIds) {
+    public Map<String, List<Integer>> deleteByIds(String csvIds) {
         List<Integer> idList = Utility.validateAndParse(csvIds, MAX_IDS_LENGTH);
         List<Integer> existingIds = songMetadataRepository.findExistingIds(idList);
 
         if (!existingIds.isEmpty()) {
             songMetadataRepository.deleteAllByIdInBatch(existingIds);
+            log.info("Deleted Song metadata Ids:{}",existingIds);
         }
 
-        return existingIds;
+        return Map.of("ids",existingIds);
     }
 
     private SongMetadata toSongMetadata(final SongMetadataCreateRequest songMetadataCreateRequest) {

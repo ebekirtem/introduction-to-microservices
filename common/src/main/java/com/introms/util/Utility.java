@@ -64,7 +64,7 @@ public class Utility {
                     throw new InvalidIdCsvException("Invalid empty token at position "+i);
                 }
                 if(!p.matches("^\\d++")){
-                    throw new InvalidIdCsvException(String.format("Invalid ID %s at position %d",p,i));
+                    throw new InvalidIdCsvException(String.format("Invalid ID format: '%s'. Only positive integers are allowed",p));
                 }
             }
             throw new InvalidIdCsvException("CSV string format is invalid");

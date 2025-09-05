@@ -2,6 +2,9 @@ server:
   port: 8080
 
 spring:
+  application:
+    name: resource-service
+
   datasource:
     url: jdbc:postgresql://localhost:5432/resource-db
     username: postgres

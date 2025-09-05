@@ -7,9 +7,9 @@ import com.introms.dto.SongMetadataCreateRequest;
 import com.introms.entity.Resource;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.repository.ResourceRepository;
-import dto.ResourceCreateRequest;
-import dto.ResourceCreateResponse;
-import dto.ResourceResponse;
+import com.introms.dto.ResourceCreateRequest;
+import com.introms.dto.ResourceCreateResponse;
+import com.introms.dto.ResourceResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +26,7 @@ import org.xml.sax.helpers.DefaultHandler;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -52,7 +53,7 @@ public class ResourceService {
         Resource resource = resourceCreateRequesttoResource(request);
         Resource savedResource = resourceRepository.saveAndFlush(resource);
 
-        log.info("Resource save with ID:{}", savedResource.getId());
+        log.info("Resource saved with ID:{}", savedResource.getId());
 
         Metadata metadata = extractMetadata(savedResource);
 
@@ -66,6 +67,7 @@ public class ResourceService {
     }
 
     public ResourceResponse getResource(String sid) {
+        log.info("Resource requested with ID:{}", sid);
         boolean idValid = Utility.isIdValid(sid);
         if (!idValid) {
             throw new InvalidMp3Exception(String.format("Invalid value '%s' for ID. Must be a positive integer", sid));
@@ -74,24 +76,28 @@ public class ResourceService {
         Integer id = Integer.parseInt(sid);
         Resource resource = resourceRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException(String.format("Resource with ID=%d not found", id)));
+        log.info("Resource found with content length:{}", resource.getContent().length);
         return new ResourceResponse(resource.getContent(), tika.detect(resource.getContent()));
     }
 
     @Transactional
-    public List<Integer> deleteByIds(String ids) {
+    public Map<String, List<Integer>> deleteByIds(String ids) {
         List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
         List<Integer> existingIds = resourceRepository.findExistingIds(idList);
 
         if (!existingIds.isEmpty()) {
             resourceRepository.deleteAllByIdInBatch(existingIds);
+            log.info("Deleted resource Ids:{}",existingIds);
             try {
-                songMetadataWebClient.deleteSongMetadata(existingIds);
+                Map<String, List<Integer>> songIdsMap = songMetadataWebClient.deleteSongMetadata(existingIds);
+                log.info("Deleted Song metadata Ids:{}",songIdsMap.values());
             } catch (WebClientResponseException e) {
+                log.warn("Roll backed delete resource with ids:{}",existingIds);
                 throw new RuntimeException(e);
             }
         }
 
-        return existingIds;
+        return Map.of("ids",existingIds);
     }
 
     private Metadata extractMetadata(Resource resource) {
@@ -111,7 +117,7 @@ public class ResourceService {
         String duration = Utility.formatDuration(metadata.get("xmpDM:duration")); // Duration (mm:ss format)
         String year = metadata.get("xmpDM:releaseDate"); // Release Year
 
-        // Map parsed metadata into a SongCreateRequest DTO
+        // Map parsed metadata into a SongMetadataCreateRequest DTO
         return new SongMetadataCreateRequest(
                 id, name, artist, album, duration, year
         );
