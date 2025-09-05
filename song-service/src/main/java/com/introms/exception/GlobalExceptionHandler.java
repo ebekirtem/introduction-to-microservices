@@ -2,16 +2,14 @@ package com.introms.exception;
 
 import com.introms.exception.response.SimpleErrorResponse;
 import com.introms.exception.response.ValidationErrorResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
-
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -19,49 +17,53 @@ public class GlobalExceptionHandler {
     public ResponseEntity<SimpleErrorResponse> handleResourceNotFound(ResourceNotFoundException ex) {
         SimpleErrorResponse errorResponse = new SimpleErrorResponse(
                 ex.getMessage(),
-                "404" // Error code for NOT_FOUND
+                String.valueOf(HttpStatus.NOT_FOUND.value())
         );
+        log.error("Resource not found:{}",ex.getMessage());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
-    /**
-     * for Manual validation
-     */
+    @ExceptionHandler(BadRequestException.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleValidation(BadRequestException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
+        );
 
-    @ExceptionHandler(ValidationException.class)
-    public ResponseEntity<ValidationErrorResponse> handleValidations(ValidationException ex) {
+        log.error("Resource validation exception:{}",ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(InvalidIdCsvException.class) // InvalidIdCsvException
+    public ResponseEntity<SimpleErrorResponse> handleIdCsv(InvalidIdCsvException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
+        );
+
+        log.error("InvalidIdCsv data:{}",ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(SongMetadataAlreadyExistException.class) // Custom exception
+    public ResponseEntity<SimpleErrorResponse> handleSongMetadataAlreadyExist(SongMetadataAlreadyExistException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.CONFLICT.value())
+        );
+
+        log.error("SongMetadata already exists:{}",ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MetadataValidationException.class)
+    public ResponseEntity<ValidationErrorResponse> handleMetadataValidations(MetadataValidationException ex) {
         ValidationErrorResponse errorResponse = new ValidationErrorResponse(
                 "Validation error",
                 ex.getDetails(),
-                "400" // Error code for BAD_REQUEST
+                String.valueOf(HttpStatus.BAD_REQUEST.value())
         );
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handle validation exceptions for @Valid.
-     */
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ValidationErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> details = new HashMap<>();
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            details.put(error.getField(), error.getDefaultMessage());
-        }
-
-        ValidationErrorResponse errorResponse = new ValidationErrorResponse(
-                "Validation error",
-                details,
-                "400" // Error code for BAD_REQUEST
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
-    }
-
-    @ExceptionHandler(BadRequestException.class) // Custom exception
-    public ResponseEntity<SimpleErrorResponse> handleBadRequest(BadRequestException ex) {
-        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
-                ex.getMessage(),
-                "400" // Error code for NOT_FOUND
-        );
+        log.error("Validation error:{}",ex.getDetails());
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
@@ -71,9 +73,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<SimpleErrorResponse> handleGeneralException(Exception ex) {
         SimpleErrorResponse errorResponse = new SimpleErrorResponse(
-                "An unexpected error occurred: " + ex.getMessage(),
-                "500" // Error code for INTERNAL_SERVER_ERROR
+                "An error occurred on the server: ",
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
         );
+        log.error("Unknown error",ex);
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

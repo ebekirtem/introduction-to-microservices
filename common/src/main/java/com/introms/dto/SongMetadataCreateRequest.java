@@ -19,12 +19,12 @@ public record SongMetadataCreateRequest(
         String album,
 
         @NotNull(message = "Duration is required")
-        @Pattern(regexp = "^\\d{2}:\\d{2}$", message = "Duration must be in mm:ss format with leading zeros")
+        @Pattern(regexp = "^\\d{2}:(?:[0-5]\\d)$", message = "Duration must be in mm:ss format with leading zeros")
         String duration,
 
-        @NotNull(message = "Year is required")
-        @Min(value = 1900, message = "Year must be at least 1900")
-        @Max(value = 2099, message = "Year must not exceed 2099")
-        Integer year
+        @NotBlank(message = "Year is required")
+
+        @Pattern(regexp = "^(19\\d{2}|20\\d{2})$", message = "Year bust be between 1900 and 2099")
+        String year
 ) {
 }

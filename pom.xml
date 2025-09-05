@@ -10,7 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>resource-service</module>
-        <module>songMetadata-service</module>
+        <module>song-service</module>
         <module>common</module>
     </modules>
 

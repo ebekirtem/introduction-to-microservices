@@ -1,6 +1,12 @@
 package com.introms.util;
 
 
+import com.introms.exception.InvalidIdCsvException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class Utility {
     public static String formatDuration(String durationInSeconds) {
         if (durationInSeconds == null || durationInSeconds.isEmpty()) {
@@ -15,19 +21,6 @@ public class Utility {
             return String.format("%02d:%02d", minutes, seconds);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid duration format: " + durationInSeconds, e);
-        }
-    }
-
-    public static Integer parseYear(String rawYear){
-        if(rawYear==null || rawYear.isBlank()){
-            return null;
-        }
-        try {
-            String trimmed=rawYear.trim();
-            String strYear=trimmed.substring(0,4);
-            return Integer.parseInt(strYear);
-        } catch (NumberFormatException e) {
-            throw new RuntimeException("Year could not be parsed",e);
         }
     }
 
@@ -46,10 +39,7 @@ public class Utility {
         }
     }
 
-    public static boolean isValidIds(String ids){
-        if(ids==null || ids.isBlank()||ids.length()>200){
-            return false;
-        }
+    private static boolean isValidIds(String ids){
         String[] parts = ids.split(",");
         for(String part:parts){
             if(!isIdValid(part))
@@ -57,4 +47,45 @@ public class Utility {
         }
         return true;
     }
+
+    public static List<Integer> validateAndParse(String csv, int maxLength){
+        if(csv==null || csv.isBlank()){
+            throw new InvalidIdCsvException("CSV string format is invalid or missing");
+        }
+        if(csv.length()>maxLength){
+            throw new InvalidIdCsvException(String.format("CSV string is too long: received %d characters, maximum allowed is %d",csv.length(),maxLength));
+        }
+
+        if(!csv.matches("^[0-9]+(?:,[0-9]+)*+")){
+            String[] parts = csv.split(",");
+            for(int i=0;i<parts.length;i++){
+                String p=parts[i];
+                if(p.isBlank()){
+                    throw new InvalidIdCsvException("Invalid empty token at position "+i);
+                }
+                if(!p.matches("^\\d++")){
+                    throw new InvalidIdCsvException(String.format("Invalid ID format: '%s'. Only positive integers are allowed",p));
+                }
+            }
+            throw new InvalidIdCsvException("CSV string format is invalid");
+        }
+
+        List<Integer> idList=new ArrayList<>();
+
+        String[] parts = csv.split(",");
+        for(int i=0;i<parts.length;i++){
+            String p = parts[i];
+            try {
+                int pp = Integer.parseInt(p);
+                if(pp<=0){
+                    throw new InvalidIdCsvException(String.format("Invalid ID format: '%s'. Only positive integers are allowed",p));
+                }
+                idList.add(pp);
+            } catch (NumberFormatException e) {
+                throw new InvalidIdCsvException(String.format("Invalid ID %s at position %d; too large for 32 bit integer",p,i));
+            }
+        }
+        return idList.stream().distinct().collect(Collectors.toList());
+    }
+
 }

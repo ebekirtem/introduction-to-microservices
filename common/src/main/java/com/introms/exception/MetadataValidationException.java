@@ -3,10 +3,10 @@ package com.introms.exception;
 
 import java.util.Map;
 
-public class ValidationException extends RuntimeException {
+public class MetadataValidationException extends RuntimeException {
     private final Map<String,String> details;
 
-    public ValidationException(String message, Map<String,String> details) {
+    public MetadataValidationException(String message, Map<String,String> details) {
         super(message);
         this.details=details;
     }
