@@ -28,10 +28,10 @@ public class SongMetadata {
     @Column(nullable = false, length = 100)
     private String album;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 10)
     private String duration;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 4)
     private String year;
 
     @Builder.Default

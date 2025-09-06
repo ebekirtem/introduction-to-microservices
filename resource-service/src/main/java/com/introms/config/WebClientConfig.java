@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import reactor.util.retry.Retry;
 import java.util.concurrent.TimeUnit;
 
 
+@Slf4j
 @Configuration
 @EnableConfigurationProperties(SongServiceConfigProperties.class)
 @RequiredArgsConstructor
@@ -36,6 +38,7 @@ public class WebClientConfig {
                                         TimeUnit.MILLISECONDS))
                 );
 
+        log.info("Song url:....{}",configProperties.getBaseUrl());
         // Build WebClient with baseUrl and HttpClient
         return builder
                 .baseUrl(configProperties.getBaseUrl())
