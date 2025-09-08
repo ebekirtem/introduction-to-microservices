@@ -24,6 +24,9 @@ public class SongMetadataWebClient {
     private final WebClient songWebClient;
 
     public void createSongMetadata(SongMetadataCreateRequest songMetadataCreateRequest) {
+
+        log.info("Webclient: {}",songWebClient.toString());
+
         songWebClient.post()
                 .uri("/songs")
                 .contentType(MediaType.APPLICATION_JSON)
