@@ -3,8 +3,8 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: resource_db
-      POSTGRES_USER: postgres  # Default, can be omitted if unchanged
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${RESOURCE_DB_USERNAME}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${RESOURCE_DB_USERNAME}
     ports:
       - "5432:5432"  # Maps container port 5432 to host port 5432
     volumes:
@@ -29,8 +29,8 @@ services:
     image: postgres:17-alpine
     environment:
       POSTGRES_DB: song_db
-      POSTGRES_USER: postgres  # Default, can be omitted if unchanged
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${SONG_DB_USERNAME}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${SONG_DB_USERNAME}
     ports:
       - "5433:5432"  # Maps container port 5432 to host port 5433 (to avoid conflict)
     volumes:
