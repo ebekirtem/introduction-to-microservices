@@ -29,7 +29,7 @@ eureka:
 
 
 song-service:
-  base-url: ${SONG_SERVICE_URL:lb://song-service}
+  base-url: ${SONG_SERVICE_URL:http://song-service}
   timeout:
     connect: 3s
     read: 5s
@@ -40,10 +40,14 @@ song-service:
       max: 5s
 
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
         include: health,info
+
 info:
   app:
     name: ${spring.application.name}

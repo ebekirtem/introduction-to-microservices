@@ -29,10 +29,14 @@ eureka:
     prefer-ip-address: true
 
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
         include: health,info
+
 info:
   app:
     name: ${spring.application.name}

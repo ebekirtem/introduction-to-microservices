@@ -27,15 +27,14 @@ public class WebClientConfig {
 
     private final SongServiceConfigProperties configProperties;
 
-    @Bean("lbWebClient")
+    @Bean
     @LoadBalanced
-    @Primary
     public WebClient.Builder webClientBuilder() {
         return WebClient.builder();
     }
 
     @Bean
-    public WebClient songServiceClient(@Qualifier("lbWebClient") WebClient.Builder builder) {
+    public WebClient songServiceClient(WebClient.Builder builder) {
         var httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) configProperties.getTimeout().getConnect().toMillis())
                 .doOnConnected(connection ->
