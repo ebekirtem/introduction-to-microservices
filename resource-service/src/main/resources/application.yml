@@ -27,16 +27,15 @@ eureka:
     instance:
       prefer-ip-address: true
 
-
 song-service:
-  base-url: ${SONG_SERVICE_URL:http://song-service}
+  base-url: ${SONG_SERVICE_URL:lb://song-service}
   timeout:
     connect: 3s
     read: 5s
   retry:
     max-attempts: 3
     backoff:
-      initial: 500ms
+      initial: 2000ms
       max: 5s
 
 management:

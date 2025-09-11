@@ -13,7 +13,6 @@ services:
   resource-service:
     build:
       context: ./resource-service
-    image: resource-service:latest
     environment:
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${RESOURCE_DB_USERNAME}
@@ -26,12 +25,6 @@ services:
       - resource-db
       - song-service
       - eureka-server
-
-  eureka-server:
-    build:
-      context: ./eureka-service-discovery
-    ports:
-      - "8761:8761"
 
   song-db:
     image: postgres:17-alpine
@@ -47,7 +40,6 @@ services:
   song-service:
     build:
       context: ./song-service
-    image: song-service:latest
     deploy:
       replicas: 2
     environment:
@@ -60,6 +52,14 @@ services:
     depends_on:
       - song-db
       - eureka-server
+
+  eureka-server:
+    build:
+      context: ./eureka-service-discovery
+    ports:
+      - "8761:8761"
+
+
 # Related settings for application.properties:
 #
 # For resource-service:

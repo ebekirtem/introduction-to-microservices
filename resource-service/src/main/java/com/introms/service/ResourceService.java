@@ -41,6 +41,7 @@ public class ResourceService {
     private static final String CONTENT_TYPE = "audio/mpeg";
     private static final Integer MAX_IDS_LENGTH = 200;
 
+
     @Transactional
     public ResourceCreateResponse saveResource(ResourceCreateRequest request) {
         if (!request.contentType().equalsIgnoreCase(CONTENT_TYPE)) {
@@ -123,7 +124,6 @@ public class ResourceService {
                 id, name, artist, album, duration, year
         );
     }
-
 
     private Resource resourceCreateRequesttoResource(ResourceCreateRequest resourceCreateRequest) {
         Resource resource = new Resource();

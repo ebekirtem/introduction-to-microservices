@@ -13,14 +13,4 @@ public class ResourceApp {
     public static void main(String[] args) {
         SpringApplication.run(ResourceApp.class,args);
     }
-
-    @Autowired
-    DiscoveryClient discoveryClient;
-
-    @PostConstruct
-    public void dumpInstances(){
-        System.out.println("Known Services: " + discoveryClient.getServices());
-        discoveryClient.getInstances("song-service")
-                .forEach(s -> System.out.println(s.getUri()));
-    }
 }
