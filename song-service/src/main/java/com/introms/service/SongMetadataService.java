@@ -15,6 +15,7 @@ import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -73,8 +74,14 @@ public class SongMetadataService {
 
     }
 
+    @Transactional
     public Map<String, List<Integer>> deleteByIds(String csvIds) {
         List<Integer> idList = Utility.validateAndParse(csvIds, MAX_IDS_LENGTH);
+
+        if(idList.isEmpty()){
+            return Map.of("ids", Collections.emptyList());
+        }
+
         List<Integer> existingIds = songMetadataRepository.findExistingIds(idList);
 
         if (!existingIds.isEmpty()) {

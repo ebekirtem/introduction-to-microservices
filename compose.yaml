@@ -19,12 +19,17 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${RESOURCE_DB_PASSWORD}
       SONG_SERVICE_URL: ${SONG_SERVICE_URL}
       EUREKA_SERVER_URL: ${EUREKA_SERVER_URL}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: test
+      RABBITMQ_PASSWORD: test
     ports:
       - "8080:8080"
     depends_on:
       - resource-db
       - song-service
       - eureka-server
+      - rabbitmq
 
   song-db:
     image: postgres:17-alpine
@@ -59,6 +64,41 @@ services:
     ports:
       - "8761:8761"
 
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # RabbitMQ main port
+      - "15672:15672"  # RabbitMQ management UI
+    environment:
+        RABBITMQ_DEFAULT_USER: test
+        RABBITMQ_DEFAULT_PASS: test
+
+  resource-processor:
+    build:
+      context: ./resource-processor
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: test
+      RABBITMQ_PASSWORD: test
+      RESOURCE_SERVICE_URL: http://resource-service:8080
+      SONG_SERVICE_URL: http://song-service:8082
+    ports:
+      - "8084:8084"
+    depends_on:
+      - rabbitmq
+      - resource-service
+      - song-service
 
 # Related settings for application.properties:
 #

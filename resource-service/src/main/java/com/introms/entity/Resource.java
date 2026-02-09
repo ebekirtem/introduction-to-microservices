@@ -18,9 +18,8 @@ public class Resource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Lob
-    @Column(nullable = false)
-    private byte[] content;
+    @Column(name ="s3_key" , nullable = false)
+    private String s3Key;
 
     @Column(nullable = false)
     private OffsetDateTime createdAt=OffsetDateTime.now(ZoneOffset.UTC);

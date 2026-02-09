@@ -54,6 +54,17 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(S3Exception.class)
+    public ResponseEntity<SimpleErrorResponse> handleS3Exception(S3Exception ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+        );
+
+        log.error("InvalidIdCsv data:{}",ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
     /**
      * Handle any other unhandled exceptions.
      */

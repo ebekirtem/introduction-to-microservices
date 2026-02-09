@@ -1,0 +1,31 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: resource-processor
+
+  cloud:
+    stream:
+      bindings:
+        resourceCreated-in-0:
+          destination: resource-created-events
+          content-type: application/json
+      rabbit:
+        bindings:
+          resourceCreated-in-0:
+            consumer:
+              queue-name: resource-created-queue
+              binding-routing-key: resource.created
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:test}
+    password: ${RABBITMQ_PASSWORD:test}
+
+resource-service:
+  base-url: ${RESOURCE_SERVICE_URL:http://localhost:8080}
+
+song-service:
+  base-url: ${SONG_SERVICE_URL:http://localhost:8082}

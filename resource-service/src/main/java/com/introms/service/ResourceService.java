@@ -2,47 +2,42 @@ package com.introms.service;
 
 import com.introms.exception.IdValidationException;
 import com.introms.exception.InvalidMp3Exception;
+import com.introms.exception.S3Exception;
 import com.introms.util.Utility;
 import com.introms.client.SongMetadataWebClient;
-import com.introms.dto.SongMetadataCreateRequest;
 import com.introms.entity.Resource;
 import com.introms.exception.ResourceNotFoundException;
 import com.introms.repository.ResourceRepository;
 import com.introms.dto.ResourceCreateRequest;
 import com.introms.dto.ResourceCreateResponse;
 import com.introms.dto.ResourceResponse;
+import com.introms.dto.ResourceCreatedEvent;
+import com.introms.config.ResourceEventSource;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.tika.Tika;
-import org.apache.tika.exception.TikaException;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.AutoDetectParser;
-import org.apache.tika.parser.ParseContext;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ResourceService {
-    private final Tika tika;
-    private final AutoDetectParser autoDetectParser;
     private final ResourceRepository resourceRepository;
+    private final FileStorageService fileStorageService;
     private final SongMetadataWebClient songMetadataWebClient;
+    private final ResourceEventSource resourceEventSource;
 
     private static final String CONTENT_TYPE = "audio/mpeg";
     private static final Integer MAX_IDS_LENGTH = 200;
+    private static final String S3PREFIX = "s3://";
 
-
-    @Transactional
     public ResourceCreateResponse saveResource(ResourceCreateRequest request) {
         if (!request.contentType().equalsIgnoreCase(CONTENT_TYPE)) {
             throw new InvalidMp3Exception("Invalid file format: application/json. Only MP3 files are allowed");
@@ -52,19 +47,26 @@ public class ResourceService {
             throw new InvalidMp3Exception("The request body is invalid MP3");
         }
 
-        Resource resource = resourceCreateRequesttoResource(request);
+        var key=UUID.randomUUID().toString()+".mp3";
+        String s3Key = null;
+        try {
+            s3Key = fileStorageService.upload(key, request.data(), request.contentType());
+        } catch (Exception e) {
+            throw new S3Exception(e.getMessage());
+        }
+
+        Resource resource = new Resource();
+        resource.setS3Key(s3Key);
+
         Resource savedResource = resourceRepository.saveAndFlush(resource);
 
         log.info("Resource saved with ID:{}", savedResource.getId());
 
-        Metadata metadata = extractMetadata(savedResource);
+        // Publish event after successful save
+        ResourceCreatedEvent event = new ResourceCreatedEvent(savedResource.getId(), savedResource.getS3Key());
+        resourceEventSource.publishResourceCreatedEvent(event);
+        log.info("Published ResourceCreatedEvent for resource ID: {}", savedResource.getId());
 
-        SongMetadataCreateRequest songMetadataCreateRequest = buildSongCreateRequest(savedResource.getId(), metadata);
-        log.info("SongMetadataCreateRequest has been build: {}",songMetadataCreateRequest);
-
-        songMetadataWebClient.createSongMetadata(songMetadataCreateRequest);
-
-        log.info("SongMetadata has been created on song-service");
         return resourceToResourceResponse(savedResource);
     }
 
@@ -78,61 +80,77 @@ public class ResourceService {
         Integer id = Integer.parseInt(sid);
         Resource resource = resourceRepository.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException(String.format("Resource with ID=%d not found", id)));
-        log.info("Resource found with content length:{}", resource.getContent().length);
-        return new ResourceResponse(resource.getContent(), tika.detect(resource.getContent()));
+
+        byte[] fileContent = fileStorageService.download(resource.getS3Key());
+
+        log.info("Resource found with content length:{}", fileContent.length);
+        return new ResourceResponse(fileContent,CONTENT_TYPE );
     }
 
     @Transactional
     public Map<String, List<Integer>> deleteByIds(String ids) {
         List<Integer> idList = Utility.validateAndParse(ids, MAX_IDS_LENGTH);
-        List<Integer> existingIds = resourceRepository.findExistingIds(idList);
+        
+        if (idList.isEmpty()) {
+            return Map.of("ids", new ArrayList<>());
+        }
 
-        if (!existingIds.isEmpty()) {
-            resourceRepository.deleteAllByIdInBatch(existingIds);
-            log.info("Deleted resource Ids:{}",existingIds);
+        // Find all existing resources in one query
+        List<Integer> existingIds = resourceRepository.findExistingIds(idList);
+        
+        if (existingIds.isEmpty()) {
+            return Map.of("ids", new ArrayList<>());
+        }
+
+        // Fetch all resources to get S3 keys
+        List<Resource> resources = resourceRepository.findAllById(existingIds);
+        List<Integer> removedIds = new ArrayList<>();
+        
+        // Delete from S3 and collect successfully deleted IDs
+        for (Resource resource : resources) {
             try {
-                Map<String, List<Integer>> songIdsMap = songMetadataWebClient.deleteSongMetadata(existingIds);
-                log.info("Deleted Song metadata Ids:{}",songIdsMap.values());
-            } catch (WebClientResponseException e) {
-                log.warn("Roll backed delete resource with ids:{}",existingIds);
-                throw new RuntimeException(e);
+                fileStorageService.delete(resource.getS3Key());
+                removedIds.add(resource.getId());
+                log.debug("Deleted S3 object with key: {}", resource.getS3Key());
+            } catch (Exception e) {
+                log.error("Failed to delete S3 object with key: {}. Error: {}", 
+                    resource.getS3Key(), e.getMessage());
+                // Continue with other deletions even if one fails
             }
         }
 
-        return Map.of("ids",existingIds);
-    }
-
-    private Metadata extractMetadata(Resource resource) {
-        try {
-            Metadata metadata = new Metadata();
-            autoDetectParser.parse(new ByteArrayInputStream(resource.getContent()), new DefaultHandler(), metadata, new ParseContext());
-            return metadata;
-        } catch (IOException | SAXException | TikaException e) {
-            throw new RuntimeException("Metadata extraction failed");
+        if (removedIds.isEmpty()) {
+            log.warn("No resources were deleted from S3");
+            return Map.of("ids", new ArrayList<>());
         }
+
+        // Delete from database
+        resourceRepository.deleteAllByIdInBatch(removedIds);
+        log.info("Deleted resource Ids from database: {}", removedIds);
+
+        // Delete from song-service
+        Map<String, List<Integer>> songIdsMap;
+        try {
+            songIdsMap = songMetadataWebClient.deleteSongMetadata(removedIds);
+            log.info("Deleted Song metadata Ids: {}", songIdsMap.get("ids"));
+        } catch (WebClientResponseException e) {
+            log.error("Failed to delete song metadata for resource ids: {}. Error: {}", 
+                removedIds, e.getMessage());
+            throw new RuntimeException("Failed to delete song metadata: " + e.getMessage(), e);
+        }
+
+        // Return the song IDs that were deleted
+        List<Integer> deletedSongIds = songIdsMap != null && songIdsMap.containsKey("ids") 
+            ? songIdsMap.get("ids") 
+            : new ArrayList<>();
+        
+        return Map.of("ids", deletedSongIds);
     }
 
-    private SongMetadataCreateRequest buildSongCreateRequest(Integer id, Metadata metadata) {
-        String name = metadata.get("dc:title"); // Title (Name)
-        String artist = metadata.get("xmpDM:artist"); // Artist
-        String album = metadata.get("xmpDM:album"); // Album
-        String duration = Utility.formatDuration(metadata.get("xmpDM:duration")); // Duration (mm:ss format)
-        String year = metadata.get("xmpDM:releaseDate"); // Release Year
 
-        // Map parsed metadata into a SongMetadataCreateRequest DTO
-        return new SongMetadataCreateRequest(
-                id, name, artist, album, duration, year
-        );
-    }
-
-    private Resource resourceCreateRequesttoResource(ResourceCreateRequest resourceCreateRequest) {
-        Resource resource = new Resource();
-        resource.setContent(resourceCreateRequest.data());
-        return resource;
-    }
 
     private ResourceCreateResponse resourceToResourceResponse(Resource resource) {
-        return new ResourceCreateResponse(resource.getId());
+        return new ResourceCreateResponse(resource.getId(),resource.getS3Key());
     }
 
 }

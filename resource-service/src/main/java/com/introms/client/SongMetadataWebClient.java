@@ -23,25 +23,6 @@ import java.util.stream.Collectors;
 public class SongMetadataWebClient {
     private final WebClient songWebClient;
 
-    public void createSongMetadata(SongMetadataCreateRequest songMetadataCreateRequest) {
-
-        log.info("Webclient: {}",songWebClient.toString());
-
-        songWebClient.post()
-                .uri("/songs")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(songMetadataCreateRequest)
-                .retrieve()
-                .onStatus(s -> s.value() == HttpStatus.BAD_REQUEST.value(), clientResponse ->
-                        clientResponse.bodyToMono(String.class)
-                                .flatMap(b -> Mono.error(new InvalidMp3Exception("Invalid Mp3"))))
-                .onStatus(HttpStatusCode::isError, clientResponse -> clientResponse.bodyToMono(String.class)
-                        .flatMap(b -> Mono.error(new RuntimeException("SongMetadata Service failed:" + b))))
-                .toBodilessEntity()
-                .block();
-    }
-
-
     public Map<String, List<Integer>> deleteSongMetadata(List<Integer> ids) {
         String csv = ids.stream().map(String::valueOf).collect(Collectors.joining(","));
         return songWebClient.delete()

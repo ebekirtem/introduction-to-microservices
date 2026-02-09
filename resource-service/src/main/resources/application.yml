@@ -1,9 +1,39 @@
 server:
   port: 8080
 
+
+s3:
+  bucket-name: resource-bucket
+  region: us-east-1
+  endpoint: http://localhost:4566
+
 spring:
   application:
     name: resource-service
+
+  cloud:
+    stream:
+      bindings:
+        resourceCreated-out-0:
+          destination: resource-created-events
+          content-type: application/json
+      rabbit:
+        bindings:
+          resourceCreated-out-0:
+            producer:
+              exchange-type: topic
+              routing-key-expression: "'resource.created'"
+              retry:
+                enabled: true
+                max-attempts: 3
+                initial-interval: 1000
+                multiplier: 2
+                max-interval: 5000
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:test}
+    password: ${RABBITMQ_PASSWORD:test}
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resource_db}
