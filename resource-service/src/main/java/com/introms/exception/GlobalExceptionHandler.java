@@ -61,8 +61,41 @@ public class GlobalExceptionHandler {
                 String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
         );
 
-        log.error("InvalidIdCsv data:{}",ex.getMessage());
-        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        log.error("S3 operation failed: {}", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(ResourceSaveException.class)
+    public ResponseEntity<SimpleErrorResponse> handleResourceSaveException(ResourceSaveException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+        );
+
+        log.error("Resource save failed: {}", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(ResourceStorageException.class)
+    public ResponseEntity<SimpleErrorResponse> handleResourceStorageException(ResourceStorageException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+        );
+
+        log.error("Resource storage cleanup failed: {}", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(EventPublishException.class)
+    public ResponseEntity<SimpleErrorResponse> handleEventPublishException(EventPublishException ex) {
+        SimpleErrorResponse errorResponse = new SimpleErrorResponse(
+                ex.getMessage(),
+                String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR.value())
+        );
+
+        log.error("Event publish failed: {}", ex.getMessage());
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**

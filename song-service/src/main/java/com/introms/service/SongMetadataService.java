@@ -37,8 +37,12 @@ public class SongMetadataService {
             throw new MetadataValidationException("Validation error", errors);
         }
 
-        if(songMetadataRepository.findById(songMetadataCreateRequest.id()).isPresent()){
-            throw new SongMetadataAlreadyExistException(String.format("Metadata for resource ID=%d already exists", songMetadataCreateRequest.id()));
+        // Idempotent check: If record already exists, return existing record
+        var existingMetadata = songMetadataRepository.findById(songMetadataCreateRequest.id());
+        if (existingMetadata.isPresent()) {
+            log.info("Song metadata already exists for resource ID: {}. Returning existing record (idempotent behavior). Existing metadata: {}", 
+                songMetadataCreateRequest.id(), existingMetadata.get());
+            return toSongMetadataCreateResponse(existingMetadata.get());
         }
 
         SongMetadata songMetadata = toSongMetadata(songMetadataCreateRequest);

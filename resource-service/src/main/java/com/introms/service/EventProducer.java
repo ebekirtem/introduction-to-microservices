@@ -1,17 +1,15 @@
-package com.introms.config;
+package com.introms.service;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 @Slf4j
-@Component
-public class ResourceEventSource {
+@Service
+@RequiredArgsConstructor
+public class EventProducer {
     private final StreamBridge streamBridge;
-    
-    public ResourceEventSource(StreamBridge streamBridge) {
-        this.streamBridge = streamBridge;
-    }
     
     public void publishResourceCreatedEvent(Object event) {
         try {

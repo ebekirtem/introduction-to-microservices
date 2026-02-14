@@ -7,16 +7,24 @@ spring:
 
   cloud:
     stream:
+      function:
+        definition: resourceCreated
       bindings:
         resourceCreated-in-0:
           destination: resource-created-events
-          content-type: application/json
+          group: resource-created-group   # <-- önemli (durable, isimlendirme net)
+          consumer:
+            max-attempts: 3               # retry bitince DLQ
       rabbit:
         bindings:
           resourceCreated-in-0:
             consumer:
-              queue-name: resource-created-queue
               binding-routing-key: resource.created
+              auto-bind-dlq: true
+              republish-to-dlq: true
+              dead-letter-queue-name: resource-created-queue.dlq
+              dlq-ttl: 86400000
+
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}

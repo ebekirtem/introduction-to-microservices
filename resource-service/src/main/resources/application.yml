@@ -16,19 +16,13 @@ spring:
       bindings:
         resourceCreated-out-0:
           destination: resource-created-events
-          content-type: application/json
       rabbit:
         bindings:
           resourceCreated-out-0:
             producer:
               exchange-type: topic
               routing-key-expression: "'resource.created'"
-              retry:
-                enabled: true
-                max-attempts: 3
-                initial-interval: 1000
-                multiplier: 2
-                max-interval: 5000
+
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
